@@ -74,20 +74,23 @@ std::vector<oneStepBelief>& computeOneStepBeliefs(const Pomdp& model,
      * For each (unique) state amongst all states from
      * reachable osb call the bOfS method
     */
-    for (auto& osb : oneStepBeliefs) {
-        std::unordered_map<uint64_t, double> stateProbs;
+    if (precomputedProbs) {
+        for (auto& osb : oneStepBeliefs) {
+            probDist stateProbs;
 
-        for (auto& reachable : osb.reachableBeliefs) {
-            auto s = reachable.s;
+            for (auto it = osb.reachableBeliefs.begin(); it != osb.reachableBeliefs.end(); ++it) {
+                auto s = oneStepBeliefs[*it].s;
 
-            auto it = stateProbs.find(s);
-            if (it == stateProbs.end()) {
-                // key does not exist
-                stateProbs.emplace(s, osb.bOfS(s, stateObservations));
+                auto probIter = stateProbs.find(s);
+                if (probIter == stateProbs.end()) {
+                    // key does not exist yet,
+                    // compute and put
+                    stateProbs.emplace(s, osb.bOfS(s, stateObservations));
+                }
             }
-        }
 
-        osb.stateProbs = stateProbs;
+            osb.stateProbs = stateProbs;
+        }
     }
 
     return oneStepBeliefs;
@@ -159,7 +162,7 @@ double beliefActionReward(const oneStepBelief& belief, const uint64_t action,
             if (bOfS == 0.0) {
                 printf("catch-all\n");
             }
-            // bOfS = belief.stateProbs[s];
+            // bOfS = belief.stateProbs.at(s);
         } else {
             bOfS = belief.bOfS(s, stateObs);
         }
@@ -407,7 +410,7 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
 
                             double bOfS;
                             if (precomputedProbs) {
-                                bOfS = b.stateProbs[bNext.s];
+                                bOfS = b.stateProbs.at(bNext.s);
                             } else {
                                 bOfS = b.bOfS(bNext.s, stateObservations);
                             }
