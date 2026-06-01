@@ -8,7 +8,7 @@
 #include <storm-pomdp/modelchecker/BeliefExplorationPomdpModelChecker.h>
 #include <storm-pomdp/modelchecker/BeliefExplorationPomdpModelCheckerOptions.h>
 #include <storm/environment/solver/MinMaxSolverEnvironment.h>
-#include <storm-pomdp/transformer/MakePOMDPCanonic.h>
+#include <storm/transformer/MakePOMDPCanonic.h>
 
 typedef storm::models::sparse::Pomdp<double> Pomdp;
 typedef storm::pomdp::modelchecker::BeliefExplorationPomdpModelChecker<Pomdp> PomdpModelChecker;
