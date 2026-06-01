@@ -86,8 +86,21 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(MAIN_FILE src/main.cpp)
 
 # set executable
-add_executable(starter-project ${MAIN_FILE})
+add_executable(starter-project
+        ${MAIN_FILE}
+        src/qtib.cpp
+        src/qfib.cpp
+)
 
 # Set include directories and dependencies
-target_link_libraries(starter-project PRIVATE storm storm-parsers)
+target_link_libraries(
+        starter-project
+        PRIVATE
+            storm
+            storm-parsers
+            storm-pomdp
+)
 # Note that other libraries/includes from Storm might need to be added depending on the used functionality.
+
+target_include_directories(starter-project PRIVATE include)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

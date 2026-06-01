@@ -1,54 +1,96 @@
+#include <format>
+
+#include "qtib.h"
+
 #include <storm/api/storm.h>
 #include <storm/utility/initialize.h>
 #include <storm-parsers/api/storm-parsers.h>
+#include <storm-pomdp/modelchecker/BeliefExplorationPomdpModelChecker.h>
+#include <storm-pomdp/modelchecker/BeliefExplorationPomdpModelCheckerOptions.h>
+#include <storm/environment/solver/MinMaxSolverEnvironment.h>
+#include <storm-pomdp/transformer/MakePOMDPCanonic.h>
 
-typedef storm::models::sparse::Dtmc<double> Dtmc;
-typedef storm::modelchecker::SparseDtmcPrctlModelChecker<Dtmc> DtmcModelChecker;
+typedef storm::models::sparse::Pomdp<double> Pomdp;
+typedef storm::pomdp::modelchecker::BeliefExplorationPomdpModelChecker<Pomdp> PomdpModelChecker;
 
-bool check(std::string const& path_to_model, std::string const& property_string) {
+void run(CLIArgsQTIB args) {
     // Assumes that the model is in the prism program language format and parses the program.
-    auto program = storm::api::parseProgram(path_to_model);
-    // Code snippet assumes a Dtmc
-    assert(program.getModelType() == storm::prism::Program::ModelType::DTMC);
-    // Then parse the properties, passing the program to give context to some potential variables.
-    auto properties = storm::api::parsePropertiesForPrismProgram(property_string, program);
-    // Translate properties into the more low-level formulae.
-    auto formulae = storm::api::extractFormulasFromProperties(properties);
+    auto program = storm::api::parseProgram(args.input);
+    assert(program.getModelType() == storm::prism::Program::ModelType::POMDP);
+    program = storm::utility::prism::preprocess(program, args.constDefs);
 
-    // Now translate the prism program into a DTMC in the sparse format.
-    // Use the formulae to add the correct labelling.
-    auto model = storm::api::buildSparseModel<double>(program, formulae)->template as<Dtmc>();
+    std::string formulaAsString = "P" + args.func + "=? [F \"goal\"]";
+    auto formula = storm::api::parsePropertiesForPrismProgram(formulaAsString, program).front().getRawFormula();
 
-    // Create a model checker on top of the sparse engine.
-    auto checker = std::make_shared<DtmcModelChecker>(*model);
-    // Create a check task with the formula. Run this task with the model checker.
-    auto result = checker->check(storm::modelchecker::CheckTask<>(*(formulae[0]), true));
-    assert(result->isExplicitQuantitativeCheckResult());
-    // Use that we know that the model checker produces an explicit quantitative result
-    auto quantRes = result->asExplicitQuantitativeCheckResult<double>();
-    // Now compare the result at the first initial state of the model with 0.5.
-    return quantRes[*model->getInitialStates().begin()] > 0.5;
+    /* auto options = storm::builder::BuilderOptions(true, true);
+    options.setBuildStateValuations(true);
+    options.setBuildChoiceLabels(true); */
+
+    auto model = storm::api::buildSparseModel<double>(program, {formula})->as<Pomdp>();
+    storm::transformer::MakePOMDPCanonic<double> makeCanonic(*model);
+    model = makeCanonic.transform();
+    assert(model->isCanonic());
+
+    storm::pomdp::modelchecker::BeliefExplorationPomdpModelCheckerOptions<double> opt(true, true);  // Always compute both bounds (lower and upper)
+    opt.gapThresholdInit = 0;
+
+    PomdpModelChecker checker(model, opt);
+
+    storm::Environment env;
+    env.solver().minMax().setMethod(storm::solver::MinMaxMethod::ValueIteration);
+    env.solver().minMax().setPrecision(storm::utility::convertNumber<storm::RationalNumber>(1e-3));
+
+    const auto checkerResult = checker.check(env, *formula);
+    printf("checker finished: result_lower=%.2f\tresult_upper=%.2f\n\n", checkerResult.lowerBound, checkerResult.upperBound);
+
+    const auto myResult = Q_TIB(*model, args.func, args.h, args.gamma, args.epsilon);
+    printf("Q_TIB finished: result=%.2f\n", myResult);
 }
 
 int main(int argc, char* argv[]) {
-    if (argc == 2 && std::string(argv[1]) == "--help") {
-        std::cout << "Storm starter project example binary. " << std::endl;
-        std::cout << "Usage: " << std::endl;
-        std::cout << argv[0] << " [PRISM MODEL] [PROPERTY STRING]" << std::endl;
-        return 0;
-    }
-    if (argc != 3) {
-        std::cout << "Needs exactly 2 arguments. Run --help for info." << std::endl;
-        return 1;
-    }
+    // std::cout << std::filesystem::current_path() << std::endl;
+    // std::cout << __cplusplus << std::endl;
 
     // Init loggers
     storm::utility::setUp();
     // Set some settings objects.
     storm::settings::initializeAll("storm-starter-project", "storm-starter-project");
 
-    // Call function
-    auto result = check(argv[1], argv[2]);
-    // And print result
-    std::cout << "Result > 0.5? " << (result ? "yes" : "no") << std::endl;
+    // Parse input
+    CLIArgsQTIB args;
+
+    if (argc == 1) {
+        args.input = "../../examples/simple.prism";
+        args.constDefs = "slippery=0";
+    } else {
+        for (int i = 1; i < argc; ++i) {
+            std::string arg = argv[i];
+
+            if (arg == "--input" && i + 1 < argc) {
+                args.input = argv[++i];
+            } else if (arg == "--constdefs" && i + 1 < argc) {
+                args.constDefs = argv[++i];
+            } else if (arg == "--func" && i + 1 < argc) {
+                args.func = argv[++i];
+            } else if (arg == "-h" && i + 1 < argc) {
+                args.h = std::stoi(argv[++i]);
+            } else if (arg == "--gamma" && i + 1 < argc) {
+                args.gamma = std::stod(argv[++i]);
+            } else if (arg == "--epsilon" && i + 1 < argc) {
+                args.epsilon = std::stod(argv[++i]);
+            } else {
+                std::cerr << "unknown or incomplete arg: " << arg << std::endl;
+                exit(1);
+            }
+        }
+    }
+
+    std::cout << args.input << "\n";
+    std::cout << args.constDefs << "\n";
+    std::cout << args.func << "\n";
+    std::cout << args.h << "\n";
+    std::cout << args.gamma << "\n";
+    std::cout << args.epsilon << "\n";
+
+    run(args);
 }
