@@ -4,7 +4,7 @@
 typedef storm::models::sparse::Pomdp<double> Pomdp;
 
 bool stateRewards = true;
-bool precomputedProbs = false;
+constexpr bool PRS_PRECOMPUTED = true;
 
 std::vector<oneStepBelief>& computeOneStepBeliefs(const Pomdp& model,
     const std::vector<std::vector<uint32_t>>& observationStates,
@@ -74,7 +74,7 @@ std::vector<oneStepBelief>& computeOneStepBeliefs(const Pomdp& model,
      * For each (unique) state amongst all states from
      * reachable osb call the bOfS method
     */
-    if (precomputedProbs) {
+    if (PRS_PRECOMPUTED) {
         for (auto& osb : oneStepBeliefs) {
             probDist stateProbs;
 
@@ -130,6 +130,7 @@ std::vector<uint64_t>& getNumOfActionsForObservations(storm::models::sparse::Pom
     return numOfActions;
 }
 
+// should be pre-computed
 double PrOfObs(const uint64_t obs, const storm::storage::SparseMatrix<double>::const_rows& saRow, const std::vector<uint32_t>& stateObs) {
     double res = 0;
     for (auto& entry : saRow) {
@@ -140,10 +141,11 @@ double PrOfObs(const uint64_t obs, const storm::storage::SparseMatrix<double>::c
         }
     }
 
-    printf("Pr(%lu): %.2f\n", obs, res);
+    // printf("Pr(%lu): %.2f\n", obs, res);
     return res;
 }
 
+// should be pre-computed
 double beliefActionReward(const oneStepBelief& belief, const uint64_t action,
     const std::vector<storm::storage::SparseMatrix<double>::index_type>& rowGroupIds,
     const storm::models::sparse::StandardRewardModel<double>& rewardModel,
@@ -157,7 +159,7 @@ double beliefActionReward(const oneStepBelief& belief, const uint64_t action,
         }
 
         double bOfS;
-        if (precomputedProbs) {
+        if (PRS_PRECOMPUTED) {
             bOfS = belief.stateProbs.count(s) ? belief.stateProbs.at(s) : 0.0;
             if (bOfS == 0.0) {
                 printf("catch-all\n");
@@ -312,11 +314,12 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
 
     // Q_TIB updates
     for (int i = 0; i < iterations; i++) {
-        printf("iteration=%d\n", i);
+        printf("##############\niteration: %d\n##############\n\n", i);
         double delta = -std::numeric_limits<double>::infinity();
 
         // compute new Q-value for initial belief
         for (unsigned long a = 0; a < numOfActions[initObs]; a++) {
+            printf("++++++++++++++++++++++++\nbelief=init\t\taction=%lu\n", a);
             double obsSum = 0;
 
             // forall observations
@@ -334,6 +337,7 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
                         for (const auto bIdx : stateOneStepBeliefs[s]) {
                             if (auto& osb = oneStepBeliefs[bIdx]; osb.a == a && osb.o == o) {
                                 const auto& saRow = transitionM.getRow(rowGroupIds[s]+a);
+                                std::cout << "debug: accessing value of " << osb << " = " << Q_old[bIdx+1][aPrime] << std::endl;
                                 stateSum += prob
                                             * PrOfObs(o, saRow, stateObservations)
                                             * Q_old[bIdx+1][aPrime]; // offset
@@ -359,7 +363,7 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
 
             for (const auto& [key, val] : b0) {
                 const auto choice_id = rowGroupIds[key] + a;
-                printf("debug: choice_id=%lu\n", choice_id);
+                // printf("debug: choice_id=%lu\n", choice_id);
                 double tmpReward = rewardModel.getStateActionReward(choice_id);
                 if (stateRewards) {
                     tmpReward += rewardModel.getStateReward(key);
@@ -368,85 +372,115 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
                 reward += val * tmpReward;
             }
 
-            double new_val = reward + discount * obsSum;
+            printf("old value: %.2f\t\t", Q_old[0][a]);
+
+            double second_term = discount * obsSum;
+            double new_val = reward + second_term;
             Q_new[0][a] = new_val;
+
+            printf("new value: %.2f + %.2f = %.2f\n", reward, second_term, Q_new[0][a]);
 
             if (double temp = (new_val - Q_old[0][a])/new_val; temp > delta) {
                 delta = temp;
             }
+            printf("++++++++++++++++++++++++\n\n");
         }
-        printf("init belief done: delta=%.2f\n", delta);
 
         // forall one-step beliefs
         for (auto bIdx = 1; bIdx < n_beliefs; bIdx++) {
             auto& b = oneStepBeliefs[bIdx-1];
+            std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\none-step belief: " << b << "\n";
 
             // forall actions
             for (uint64_t a = 0; a < numOfActions[b.o]; a++) {
+                printf("\naction=%lu:\n", a);
                 // Q-TIB
                 double obsSum = 0;
 
                 // forall observations
                 for (auto o : obsSets[bIdx][a]) {
-                    double sum;
-                    sum = (func == MIN)
-                        ? std::numeric_limits<double>::infinity()
-                        : -std::numeric_limits<double>::infinity();
 
+
+                    // could be pre-computed
                     std::vector<size_t> relevantOsbIds;
 
+                    // this replaces the loop over all states
                     auto& bv = b.reachableBeliefs;
                     for (auto it = bv.begin(); it != bv.end(); ++it) {
-                        if (auto& b = oneStepBeliefs[*it]; b.a == a && b.o == o) {
+                        if (auto& temp = oneStepBeliefs[*it]; temp.a == a && temp.o == o) {
                             relevantOsbIds.push_back(*it);
                         }
                     }
 
-                    // compute for every a' in A, looking for func
+                    // sum over an empty set is 0
+                    if (relevantOsbIds.size() == 0) {
+                        // obsSum += 0;
+                        continue;
+                    }
+
+                    double funcOfStateSum;
+                    funcOfStateSum = (func == MIN)
+                        ? std::numeric_limits<double>::infinity()
+                        : -std::numeric_limits<double>::infinity();
+
                     const auto A = numOfActions[o];
+                    // if there is no future, i.e. A = 0,
+                    // we settle for the immediate reward
+                    if (A == 0) {
+                        continue;
+                    }
+
+                    // compute for every a' in A, looking for $func
                     for (uint64_t aPrime = 0; aPrime < A; aPrime++) {
-                        double aPrimeVal = 0;
+                        double stateSum = 0;
                         for (const auto osbId : relevantOsbIds) {
                             auto& bNext = oneStepBeliefs[osbId];
 
                             double bOfS;
-                            if (precomputedProbs) {
+                            if (PRS_PRECOMPUTED) {
+                                // no error handling
                                 bOfS = b.stateProbs.at(bNext.s);
                             } else {
                                 bOfS = b.bOfS(bNext.s, stateObservations);
                             }
 
-                            aPrimeVal += bOfS
+                            std::cout << "debug: accessing value of " << bNext << " = " << Q_old[osbId+1][aPrime] << std::endl;
+                            stateSum += bOfS
                                         * PrOfObs(o, bNext.saRow, stateObservations)
                                         * Q_old[osbId + 1][aPrime];
                         }
 
                         if (func == MIN) {
-                            if (aPrimeVal < sum) {
-                                sum = aPrimeVal;
+                            if (stateSum < funcOfStateSum) {
+                                funcOfStateSum = stateSum;
                             }
                         } else {
-                            if (aPrimeVal > sum) {
-                                sum = aPrimeVal;
+                            if (stateSum > funcOfStateSum) {
+                                funcOfStateSum = stateSum;
                             }
                         }
                     }
 
-                    obsSum += sum;
+                    obsSum += funcOfStateSum;
                 }
+                printf("old value: %.2f\t\t", Q_old[bIdx][a]);
 
                 const double reward = beliefActionReward(b, a, rowGroupIds, rewardModel, stateObservations, observationStates[b.o]);
-
-                double new_val = reward + discount * obsSum;
+                const double second_term = discount * obsSum;
+                double new_val = reward + second_term;
                 Q_new[bIdx][a] = new_val;
+
+                printf("new value: %.2f + %.2f = %.2f\n", reward, second_term, Q_new[bIdx][a]);
 
                 if (double temp = (new_val - Q_old[bIdx][a])/new_val; temp > delta) {
                     delta = temp;
                 }
             }
+
+            printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
         }
 
-        printf("rest done: delta=%.2f\n\n", delta);
+        printf("delta=%.2f\n\n", delta);
 
         if (discount / (1.0 - discount) * delta < epsilon) {
             printf("precision met, iterations=%d\n", i);
@@ -464,7 +498,7 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
             res = val;
         }
     }
-    printf("]\n");
+    printf("]\n\n");
 
     return res;
 }

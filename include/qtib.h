@@ -10,11 +10,12 @@ typedef std::unordered_map<uint64_t, double> probDist;
 
 struct CLIArgsQTIB {
     std::string input;
-    std::string constDefs;
+    std::string constDefs = "";
+    std::string formula;
     std::string func = MAX;
-    int h               = 100;
+    int h               = 250;
     double gamma        = 0.95;
-    double epsilon      = 1e-6;
+    double epsilon      = 1e-3;
 };
 
 struct oneStepBelief {

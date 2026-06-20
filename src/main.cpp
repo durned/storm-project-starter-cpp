@@ -19,7 +19,7 @@ void run(CLIArgsQTIB args) {
     assert(program.getModelType() == storm::prism::Program::ModelType::POMDP);
     program = storm::utility::prism::preprocess(program, args.constDefs);
 
-    std::string formulaAsString = "R" + args.func + "=? [F \"goal\"]";
+    std::string formulaAsString = args.formula;
     auto formula = storm::api::parsePropertiesForPrismProgram(formulaAsString, program).front().getRawFormula();
 
     /* auto options = storm::builder::BuilderOptions(true, true);
@@ -60,23 +60,25 @@ int main(int argc, char* argv[]) {
     CLIArgsQTIB args;
 
     if (argc == 1) {
-        args.input = "../../examples/simple.prism";
-        args.constDefs = "slippery=0";
+        std::cerr << "provide at least the PRISM input file, if required constant definitions, and the formula." << std::endl;
     } else {
         for (int i = 1; i < argc; ++i) {
             std::string arg = argv[i];
+            const bool cond = i + 1 < argc;
 
-            if (arg == "--input" && i + 1 < argc) {
+            if (arg == "--input" && cond) {
                 args.input = argv[++i];
-            } else if (arg == "--constdefs" && i + 1 < argc) {
+            } else if (arg == "--constdefs" && cond) {
                 args.constDefs = argv[++i];
-            } else if (arg == "--func" && i + 1 < argc) {
+            } else if (arg == "--formula" && cond) {
+                args.formula = argv[++i];
+            } else if (arg == "--func" && cond) {
                 args.func = argv[++i];
-            } else if (arg == "-h" && i + 1 < argc) {
+            } else if (arg == "-h" && cond) {
                 args.h = std::stoi(argv[++i]);
-            } else if (arg == "--gamma" && i + 1 < argc) {
+            } else if (arg == "--gamma" && cond) {
                 args.gamma = std::stod(argv[++i]);
-            } else if (arg == "--epsilon" && i + 1 < argc) {
+            } else if (arg == "--epsilon" && cond) {
                 args.epsilon = std::stod(argv[++i]);
             } else {
                 std::cerr << "unknown or incomplete arg: " << arg << std::endl;
