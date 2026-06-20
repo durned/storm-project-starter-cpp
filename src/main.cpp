@@ -40,11 +40,11 @@ void run(CLIArgsQTIB args) {
     env.solver().minMax().setMethod(storm::solver::MinMaxMethod::ValueIteration);
     env.solver().minMax().setPrecision(storm::utility::convertNumber<storm::RationalNumber>(1e-3));
 
-    const auto checkerResult = checker.check(env, *formula);
-    printf("checker finished: result_lower=%.2f\tresult_upper=%.2f\n\n", checkerResult.lowerBound, checkerResult.upperBound);
-
     const auto myResult = Q_TIB(*model, args.func, args.h, args.gamma, args.epsilon);
     printf("Q_TIB finished: result=%.2f\n", myResult);
+
+    const auto checkerResult = checker.check(env, *formula);
+    printf("checker finished: result_lower=%.2f\tresult_upper=%.2f\n\n", checkerResult.lowerBound, checkerResult.upperBound);
 }
 
 int main(int argc, char* argv[]) {

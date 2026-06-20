@@ -5,7 +5,7 @@
 
 pomdp
 
-const int N = 3; // grid size
+const int N; // grid size
 
 // only the target is observable which is in the south east corner
 // (also if the initialisation step has been done)

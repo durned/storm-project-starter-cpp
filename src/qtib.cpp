@@ -3,7 +3,7 @@
 
 typedef storm::models::sparse::Pomdp<double> Pomdp;
 
-bool stateRewards = true;
+bool stateRewards;
 constexpr bool PRS_PRECOMPUTED = true;
 
 std::vector<oneStepBelief>& computeOneStepBeliefs(const Pomdp& model,
@@ -161,10 +161,11 @@ double beliefActionReward(const oneStepBelief& belief, const uint64_t action,
         double bOfS;
         if (PRS_PRECOMPUTED) {
             bOfS = belief.stateProbs.count(s) ? belief.stateProbs.at(s) : 0.0;
+            /*
             if (bOfS == 0.0) {
                 printf("catch-all\n");
             }
-            // bOfS = belief.stateProbs.at(s);
+            */
         } else {
             bOfS = belief.bOfS(s, stateObs);
         }
@@ -179,18 +180,16 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
     assert(iterations > 0);
     assert(func == MIN || func == MAX);
 
-    // assert(model.hasUniqueRewardModel()); simple.prism does not for some reason
+    assert(model.hasUniqueRewardModel());
     const auto& rewardModel = model.getRewardModels().begin()->second;
 
-    // assert(rewardModel.hasStateActionRewards()); <-- this crashes things
+    assert(rewardModel.hasStateActionRewards());
 
-    /*
     if (rewardModel.hasStateRewards()) {
         stateRewards = true;
     } else {
         stateRewards = false;
     }
-    so does this ^ */
 
     const auto S = model.getNumberOfStates();
     const auto O = model.getNrObservations();
