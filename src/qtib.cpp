@@ -179,6 +179,7 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
 
     // assert(model.hasUniqueRewardModel()); simple.prism does not for some reason
     const auto& rewardModel = model.getRewardModels().begin()->second;
+
     // assert(rewardModel.hasStateActionRewards()); <-- this crashes things
 
     /*

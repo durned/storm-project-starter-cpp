@@ -19,7 +19,7 @@ void run(CLIArgsQTIB args) {
     assert(program.getModelType() == storm::prism::Program::ModelType::POMDP);
     program = storm::utility::prism::preprocess(program, args.constDefs);
 
-    std::string formulaAsString = "P" + args.func + "=? [F \"goal\"]";
+    std::string formulaAsString = "R" + args.func + "=? [F \"goal\"]";
     auto formula = storm::api::parsePropertiesForPrismProgram(formulaAsString, program).front().getRawFormula();
 
     /* auto options = storm::builder::BuilderOptions(true, true);
