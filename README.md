@@ -1,32 +1,55 @@
-# storm-project-starter-cpp
-Starter project for the C++ API of [Storm](https://www.stormchecker.org).
+# TIB in Storm
 
 ## Getting Started
-Before starting, make sure that Storm is installed. If not, see the [documentation](https://www.stormchecker.org/documentation/obtain-storm/build.html) for details on how to install Storm. It is necessary to build Storm from source, i.e. a Homebrew installation will most likely not work.
+Before starting, make sure that you have some form of Storm installed. We use a [Docker container](https://www.stormchecker.org/documentation/obtain-storm/docker.html) which comes with required dependencies installed.
 
-First, configure and compile the project. Therefore, execute
+The following instructions are specific to the Docker setup. Clone the repository and make sure you are in the same directory as the Dockerfile. 
+Build the docker container (will take some time to fetch the image):
 ```
-mkdir build
-cd build
-cmake ..
-make
-cd ..
+docker build -t <container name> .
+```
+Start it and navigate to the directory of the built executable:
+```
+docker run -it <container name> bash
+cd /opt/storm-project-starter-cpp/build
 ```
 
-Then, run the executable using 
-```
-./build/bin/starter-project examples/die.pm examples/die.pctl
-```
-The answer should be no.
+The executable requires a relative path to the input model in the **PRISM** language which you would like to run TIB on.  
+You must also specify a reward formula so that Storm can build it properly. Depending on the model, you may want to set the goal (`min` or `max` reward respectively), as well as some constants. 
 
-Then, run the executable using 
+An example input using `grid.prism` (the repository comes with it) would look like so:
 ```
-./build/bin/starter-project examples/die.pm examples/die2.pctl
+./starter-project --input ../../examples/eval_any/grid.prism --constdefs N=4 --formula "Rmin=? [F target ]" --func min
 ```
-The answer should be yes.
 
-## What is next?
-You are all set to implement your own tools on top of Storm.
-Note that you might need to add additional Storm libraries as dependencies in [CMake](CMakeLists.txt).
+The output should contain some logs and, with any luck, end with:
+```
+Q_TIB finished: result=2.91
+WARN  (BeliefMdpExplorer.cpp:924): Computed values are smaller than the lower bound.
+checker finished: result_lower=3.38	result_upper=3.88
+```
 
-Feel free to contribute your new algorithms to Storm, such that others can enjoy them.
+Just in case, consult this `struct` in case of misalignments in the README and how your input is handled:
+```
+struct CLIArgsQTIB {
+    std::string input;
+    std::string constDefs = "";
+    std::string formula;
+    std::string func = MAX;
+    int h               = 250;
+    double gamma        = 0.95;
+    double epsilon      = 1e-3;
+};
+```
+..and `main.cpp` for parsing logic. 
+
+### More Arguments
+  - `int -h`: max number of iterations, default is 250.
+  - `double --gamma`: discount factor, default is 0.95.
+  - `double --epsilon`: satisfactory precision for early termination, default is 1e-3.
+
+## Current Shortcomings
+  - By default, probabilities of states are pre-computed. For a little while it will not be possible to change this.
+  - Initial values are all zeros. The plan is to use FIB to initialize.
+  - Some rather trivial, repetitive computations are not yet pre-computed.
+  - Non-canonical models are not (yet?) supported.
