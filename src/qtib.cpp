@@ -318,7 +318,7 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
 
         // compute new Q-value for initial belief
         for (unsigned long a = 0; a < numOfActions[initObs]; a++) {
-            printf("++++++++++++++++++++++++\nbelief=init\t\taction=%lu\n", a);
+            // printf("++++++++++++++++++++++++\nbelief=init\t\taction=%lu\n", a);
             double obsSum = 0;
 
             // forall observations
@@ -336,7 +336,7 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
                         for (const auto bIdx : stateOneStepBeliefs[s]) {
                             if (auto& osb = oneStepBeliefs[bIdx]; osb.a == a && osb.o == o) {
                                 const auto& saRow = transitionM.getRow(rowGroupIds[s]+a);
-                                std::cout << "debug: accessing value of " << osb << " = " << Q_old[bIdx+1][aPrime] << std::endl;
+                                // std::cout << "debug: accessing value of " << osb << " = " << Q_old[bIdx+1][aPrime] << std::endl;
                                 stateSum += prob
                                             * PrOfObs(o, saRow, stateObservations)
                                             * Q_old[bIdx+1][aPrime]; // offset
@@ -371,28 +371,28 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
                 reward += val * tmpReward;
             }
 
-            printf("old value: %.2f\t\t", Q_old[0][a]);
+            // printf("old value: %.2f\t\t", Q_old[0][a]);
 
             double second_term = discount * obsSum;
             double new_val = reward + second_term;
             Q_new[0][a] = new_val;
 
-            printf("new value: %.2f + %.2f = %.2f\n", reward, second_term, Q_new[0][a]);
+            // printf("new value: %.2f + %.2f = %.2f\n", reward, second_term, Q_new[0][a]);
 
             if (double temp = (new_val - Q_old[0][a])/new_val; temp > delta) {
                 delta = temp;
             }
-            printf("++++++++++++++++++++++++\n\n");
+            // printf("++++++++++++++++++++++++\n\n");
         }
 
         // forall one-step beliefs
         for (auto bIdx = 1; bIdx < n_beliefs; bIdx++) {
             auto& b = oneStepBeliefs[bIdx-1];
-            std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\none-step belief: " << b << "\n";
+            // std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\none-step belief: " << b << "\n";
 
             // forall actions
             for (uint64_t a = 0; a < numOfActions[b.o]; a++) {
-                printf("\naction=%lu:\n", a);
+                // printf("\naction=%lu:\n", a);
                 // Q-TIB
                 double obsSum = 0;
 
@@ -443,7 +443,7 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
                                 bOfS = b.bOfS(bNext.s, stateObservations);
                             }
 
-                            std::cout << "debug: accessing value of " << bNext << " = " << Q_old[osbId+1][aPrime] << std::endl;
+                            // std::cout << "debug: accessing value of " << bNext << " = " << Q_old[osbId+1][aPrime] << std::endl;
                             stateSum += bOfS
                                         * PrOfObs(o, bNext.saRow, stateObservations)
                                         * Q_old[osbId + 1][aPrime];
@@ -462,24 +462,25 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
 
                     obsSum += funcOfStateSum;
                 }
-                printf("old value: %.2f\t\t", Q_old[bIdx][a]);
+                // printf("old value: %.2f\t\t", Q_old[bIdx][a]);
 
                 const double reward = beliefActionReward(b, a, rowGroupIds, rewardModel, stateObservations, observationStates[b.o]);
                 const double second_term = discount * obsSum;
                 double new_val = reward + second_term;
                 Q_new[bIdx][a] = new_val;
 
-                printf("new value: %.2f + %.2f = %.2f\n", reward, second_term, Q_new[bIdx][a]);
+                // printf("new value: %.2f + %.2f = %.2f\n", reward, second_term, Q_new[bIdx][a]);
 
                 if (double temp = (new_val - Q_old[bIdx][a])/new_val; temp > delta) {
                     delta = temp;
                 }
             }
 
-            printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
+            // printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
         }
 
         printf("delta=%.2f\n\n", delta);
+        printf("##############\n\n");
 
         if (discount / (1.0 - discount) * delta < epsilon) {
             printf("precision met, iterations=%d\n", i);

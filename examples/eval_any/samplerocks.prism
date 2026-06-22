@@ -1,5 +1,7 @@
 pomdp
 
+// --input ../../examples/eval_any/samplerocks.prism --formula "Rmin=? [F \"goal\" ]" --func min --constdefs N=4
+
 observables
 started, x, y, r1taken, r1lastobs, finish, r2taken, r2lastobs//, r3taken, r3lastobs
 endobservables
@@ -61,7 +63,7 @@ module rock1
 endmodule
 
 module rock2 = rock1[r1sample=r2sample, r1sense=r2sense, r1x = r2x, r1y = r2y, r1qual=r2qual,r1taken=r2taken,r1lastobs=r2lastobs,normdistr1=normdistr2] endmodule
-module rock3 = rock1[r1sample=r3sample, r1sense=r3sense, r1x = r3x, r1y = r3y, r1qual=r3qual,r1taken=r3taken,r1lastobs=r3lastobs,normdistr1=normdistr3] endmodule
+//module rock3 = rock1[r1sample=r3sample, r1sense=r3sense, r1x = r3x, r1y = r3y, r1qual=r3qual,r1taken=r3taken,r1lastobs=r3lastobs,normdistr1=normdistr3] endmodule
 
 module robot
     x : [xMIN..xMx] init 0;
@@ -79,8 +81,8 @@ rewards "cost"
     [r1sample] !r1qual : 20;
     [r2sense] true : 1;
     [r2sample] !r2qual : 20;
-    [r3sense] true : 1;
-    [r3sample] !r3qual : 20;
+    //[r3sense] true : 1;
+    //[r3sample] !r3qual : 20;
     [north] true : 1;
     [south] true : 1;
     [west] true : 1;
