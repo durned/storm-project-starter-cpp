@@ -1,0 +1,58 @@
+pomdp
+
+// to run:  --input ../../examples/eval_correctness/tiger.prism --formula "Rmax=? [C ]" --func max
+
+observable "tigerleft" = (obs=0);
+observable "tigerright" = (obs=1);
+
+module tiger
+
+    // hidden state
+    // 0 = tiger-left
+    // 1 = tiger-right
+    s : [0..1];
+
+    // observation
+    obs : [0..1];
+
+    // listen: state unchanged
+    [listen] s=0 ->
+        0.85:(s'=0)&(obs'=0)
+      + 0.15:(s'=0)&(obs'=1);
+
+    [listen] s=1 ->
+        0.15:(s'=1)&(obs'=0)
+      + 0.85:(s'=1)&(obs'=1);
+
+    // open-left
+    [openleft] true ->
+        0.25:(s'=0)&(obs'=0)
+      + 0.25:(s'=0)&(obs'=1)
+      + 0.25:(s'=1)&(obs'=0)
+      + 0.25:(s'=1)&(obs'=1);
+
+    // open-right
+    [openright] true ->
+        0.25:(s'=0)&(obs'=0)
+      + 0.25:(s'=0)&(obs'=1)
+      + 0.25:(s'=1)&(obs'=0)
+      + 0.25:(s'=1)&(obs'=1);
+
+endmodule
+
+// initial belief
+init
+    s=0 | s=1
+endinit
+
+rewards
+
+    [listen] true : -1;
+
+    [openleft] s=0 : -100;
+    [openleft] s=1 : 10;
+
+    [openright] s=0 : 10;
+    [openright] s=1 : -100;
+
+endrewards
