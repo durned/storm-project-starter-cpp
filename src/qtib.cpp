@@ -233,10 +233,12 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     const auto n_beliefs = oneStepBeliefs.size()+1; // with the initial belief
     const auto saRowDummy = transitionM.getRow(0);
 
+    /*
     printf("\nOne-step beliefs:\n");
     for (auto& osb : oneStepBeliefs) {
         std::cout << osb << std::endl;
     }
+    */
 
     const auto& numOfActions = getNumOfActionsForObservations(*model);
 
@@ -297,6 +299,7 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     }
     printf("\n");
 
+    /*
     for (int i = 1 ; i < n_beliefs; i++) {
         std::cout << "One-step belief: " << oneStepBeliefs[i-1] << std::endl;
         for (uint64_t a = 0; a < numOfActions[oneStepBeliefs[i-1].o]; a++) {
@@ -307,7 +310,7 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
             printf("\n");
         }
         printf("\n");
-    }
+    } */
 
     // Q_TIB updates
     for (int i = 0; i < iterations; i++) {
