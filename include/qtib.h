@@ -1,15 +1,25 @@
 #ifndef STORM_PROJECT_STARTER_QTIB_H
 #define STORM_PROJECT_STARTER_QTIB_H
 
+#include <filesystem>
+
 #include <storm/api/storm.h>
+
+
+enum class InputModelFmt {
+    Prism,
+    Drn,
+};
 
 const std::string MIN = "min";
 const std::string MAX = "max";
 
+typedef storm::models::sparse::Pomdp<double> Pomdp;
 typedef std::unordered_map<uint64_t, double> probDist;
 
 struct CLIArgsQTIB {
-    std::string input;
+    InputModelFmt inModelFmt;
+    std::filesystem::path input;
     std::string constDefs = "";
     std::string formula;
     std::string func = MAX;
@@ -62,6 +72,6 @@ struct oneStepBeliefHash {
     }
 };
 
-double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& func, int iterations, double discount, double epsilon);
+double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, int iterations, double discount, double epsilon);
 
 #endif //STORM_PROJECT_STARTER_QTIB_H

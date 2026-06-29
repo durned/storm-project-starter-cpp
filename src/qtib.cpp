@@ -1,8 +1,6 @@
 #include "qtib.h"
 #include <storm/api/storm.h>
 
-typedef storm::models::sparse::Pomdp<double> Pomdp;
-
 bool stateRewards;
 constexpr bool PRS_PRECOMPUTED = true;
 
@@ -102,7 +100,7 @@ std::vector<oneStepBelief>& computeOneStepBeliefs(const Pomdp& model,
 // and, since I am working with a transition matrix and not set theory, I need to know what
 // I am iterating over in for loops. Specifically, this would define the set of actions
 // in the Cartesian product 'B_1 X A' used in TIB. The "observations" part is explained below.
-std::vector<uint64_t>& getNumOfActionsForObservations(storm::models::sparse::Pomdp<double>& model) {
+std::vector<uint64_t>& getNumOfActionsForObservations(Pomdp& model) {
     const auto S = model.getNumberOfStates();
     const auto O = model.getNrObservations();
 
@@ -176,12 +174,12 @@ double beliefActionReward(const oneStepBelief& belief, const uint64_t action,
     return res;
 }
 
-double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& func, const int iterations, const double discount, const double epsilon) {
+double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int iterations, const double discount, const double epsilon) {
     assert(iterations > 0);
     assert(func == MIN || func == MAX);
 
-    assert(model.hasUniqueRewardModel());
-    const auto& rewardModel = model.getRewardModels().begin()->second;
+    assert(model->hasUniqueRewardModel());
+    const auto& rewardModel = model->getRewardModels().begin()->second;
 
     assert(rewardModel.hasStateActionRewards());
 
@@ -191,14 +189,14 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
         stateRewards = false;
     }
 
-    const auto S = model.getNumberOfStates();
-    const auto O = model.getNrObservations();
+    const auto S = model->getNumberOfStates();
+    const auto O = model->getNrObservations();
 
-    const auto& initStates = model.getInitialStates();
+    const auto& initStates = model->getInitialStates();
     const auto nOfInitStates = static_cast<double>(initStates.getNumberOfSetBits());
     std::cout << "N of init states: " << nOfInitStates << "\n\n";
 
-    const auto& stateObservations = model.getObservations();
+    const auto& stateObservations = model->getObservations();
     // map observations to set of states which have them
     std::vector<std::vector<uint32_t>> observationStates(O);
     for (uint_fast64_t s = 0; s < S; s++) {
@@ -206,7 +204,7 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
         observationStates[o].push_back(s);
     }
 
-    const auto& transitionM = model.getTransitionMatrix();
+    const auto& transitionM = model->getTransitionMatrix();
     const auto& rowGroupIds = transitionM.getRowGroupIndices();
 
     // Eq. (2)
@@ -231,7 +229,7 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
 
     // actions set in the struct fields are not global labels,
     // but are indices with respect to rowgroup of the state
-    const std::vector<oneStepBelief>& oneStepBeliefs = computeOneStepBeliefs(model, observationStates, beliefIndices, stateOneStepBeliefs);
+    const std::vector<oneStepBelief>& oneStepBeliefs = computeOneStepBeliefs(*model, observationStates, beliefIndices, stateOneStepBeliefs);
     const auto n_beliefs = oneStepBeliefs.size()+1; // with the initial belief
     const auto saRowDummy = transitionM.getRow(0);
 
@@ -240,7 +238,7 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
         std::cout << osb << std::endl;
     }
 
-    const auto& numOfActions = getNumOfActionsForObservations(model);
+    const auto& numOfActions = getNumOfActionsForObservations(*model);
 
     // Q-values
     std::vector<std::vector<double>> Q_old(n_beliefs);
@@ -479,7 +477,7 @@ double Q_TIB(storm::models::sparse::Pomdp<double>& model, const std::string& fun
             // printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
         }
 
-        printf("delta=%.2f\n\n", delta);
+        printf("delta=%.6f\n\n", delta);
         printf("##############\n\n");
 
         if (discount / (1.0 - discount) * delta < epsilon) {
