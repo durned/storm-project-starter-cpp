@@ -36,3 +36,6 @@ build/
 cmake-build-debug/
 
 .idea/
+.venv/
+examples/eval_correctness/fourth.drn
+examples/*.prism

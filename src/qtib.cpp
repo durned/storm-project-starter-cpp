@@ -248,12 +248,12 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
 
     // initialize inner vectors to zero
     // init belief
-    Q_old[0] = std::vector<double>(numOfActions[initObs], 0); // put FIB here
+    Q_old[0] = std::vector<double>(numOfActions[initObs], 0); // 1:1 correspondence with FIB Q-vals
     Q_new[0] = std::vector<double>(numOfActions[initObs], 0);
     // rest
     for (int i = 1; i < n_beliefs; i++) {
         auto len = numOfActions[oneStepBeliefs[i-1].o];
-        Q_old[i] = std::vector<double>(len, 0); // put FIB here
+        Q_old[i] = std::vector<double>(len, 0); // future work: initialize with FIB
         Q_new[i] = std::vector<double>(len, 0);
     }
 
