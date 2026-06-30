@@ -192,9 +192,11 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     const auto S = model->getNumberOfStates();
     const auto O = model->getNrObservations();
 
+    printf("S=%lu\nO=%lu\nC=%lu\n\n", S, O, model->getNumberOfChoices());
+
     const auto& initStates = model->getInitialStates();
     const auto nOfInitStates = static_cast<double>(initStates.getNumberOfSetBits());
-    std::cout << "N of init states: " << nOfInitStates << "\n\n";
+    printf("N_initStates=%.0f\n", nOfInitStates);
 
     const auto& stateObservations = model->getObservations();
     // map observations to set of states which have them
@@ -218,10 +220,11 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     const auto sampleInitState = b0.begin()->first;
     const auto initObs = stateObservations[sampleInitState];
 
-    printf("Initial belief:\n");
+    printf("b_0:\t\t");
     for (const auto& [key, val] : b0) {
-        printf("state=%lu\t\tprob=%.2f\n", key, val);
+        printf("s=%lu Pr=%.2f\t\t", key, val);
     }
+    printf("\n\n");
 
     // rest of one-step beliefs
     std::unordered_map<oneStepBelief, size_t, oneStepBeliefHash> beliefIndices;
@@ -231,6 +234,7 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     // but are indices with respect to rowgroup of the state
     const std::vector<oneStepBelief>& oneStepBeliefs = computeOneStepBeliefs(*model, observationStates, beliefIndices, stateOneStepBeliefs);
     const auto n_beliefs = oneStepBeliefs.size()+1; // with the initial belief
+    printf("N_oneStepBeliefs = %lu\n\n", oneStepBeliefs.size());
     const auto saRowDummy = transitionM.getRow(0);
 
     /*
@@ -288,7 +292,7 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
         }
     }
 
-    printf("\n");
+    /*
     printf("b0: ");
     for (uint64_t a = 0; a < numOfActions[initObs]; a++) {
         printf("action=%lu: ", a);
@@ -299,7 +303,6 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     }
     printf("\n");
 
-    /*
     for (int i = 1 ; i < n_beliefs; i++) {
         std::cout << "One-step belief: " << oneStepBeliefs[i-1] << std::endl;
         for (uint64_t a = 0; a < numOfActions[oneStepBeliefs[i-1].o]; a++) {

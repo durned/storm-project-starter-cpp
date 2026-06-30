@@ -117,12 +117,14 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    /*
     std::cout << args.input << "\n";
     std::cout << args.constDefs << "\n";
     std::cout << args.func << "\n";
     std::cout << args.h << "\n";
     std::cout << args.gamma << "\n";
     std::cout << args.epsilon << "\n";
+    */
 
     run(args);
 }
