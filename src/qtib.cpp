@@ -186,17 +186,16 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     assert(model->hasUniqueRewardModel());
     const auto& rewardModel = model->getRewardModels().begin()->second;
 
-    assert(rewardModel.hasStateActionRewards());
-
-    using Clock = std::chrono::steady_clock;
-    auto algStart = Clock::now();
-
     if (rewardModel.hasStateRewards()) {
         stateRewards = true;
     } else {
         stateRewards = false;
     }
     fprintf(log, "state_rewards = %s\n", stateRewards ? "true" : "false");
+    assert(rewardModel.hasStateActionRewards());
+
+    using Clock = std::chrono::steady_clock;
+    auto algStart = Clock::now();
 
     const auto S = model->getNumberOfStates();
     const auto O = model->getNrObservations();
