@@ -1,4 +1,9 @@
+#include <chrono>
+#include <cstdio>
+#include <format>
+
 #include "qtib.h"
+
 #include <storm/api/storm.h>
 
 bool stateRewards;
@@ -174,7 +179,7 @@ double beliefActionReward(const oneStepBelief& belief, const uint64_t action,
     return res;
 }
 
-double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int iterations, const double discount, const double epsilon) {
+double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int iterations, const double discount, const double epsilon, FILE* log, const int timeout) {
     assert(iterations > 0);
     assert(func == MIN || func == MAX);
 
@@ -183,20 +188,23 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
 
     assert(rewardModel.hasStateActionRewards());
 
+    using Clock = std::chrono::steady_clock;
+    auto algStart = Clock::now();
+
     if (rewardModel.hasStateRewards()) {
         stateRewards = true;
     } else {
         stateRewards = false;
     }
+    fprintf(log, "state_rewards = %s\n", stateRewards ? "true" : "false");
 
     const auto S = model->getNumberOfStates();
     const auto O = model->getNrObservations();
 
-    printf("S=%lu\nO=%lu\nC=%lu\n\n", S, O, model->getNumberOfChoices());
+    fprintf(log, "S=%lu\tO=%lu\tC=%lu\n", S, O, model->getNumberOfChoices());
 
     const auto& initStates = model->getInitialStates();
     const auto nOfInitStates = static_cast<double>(initStates.getNumberOfSetBits());
-    printf("N_initStates=%.0f\n", nOfInitStates);
 
     const auto& stateObservations = model->getObservations();
     // map observations to set of states which have them
@@ -220,12 +228,6 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     const auto sampleInitState = b0.begin()->first;
     const auto initObs = stateObservations[sampleInitState];
 
-    printf("b_0:\t\t");
-    for (const auto& [key, val] : b0) {
-        printf("s=%lu Pr=%.2f\t\t", key, val);
-    }
-    printf("\n\n");
-
     // rest of one-step beliefs
     std::unordered_map<oneStepBelief, size_t, oneStepBeliefHash> beliefIndices;
     std::vector<std::vector<size_t>> stateOneStepBeliefs(S);
@@ -234,7 +236,7 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     // but are indices with respect to rowgroup of the state
     const std::vector<oneStepBelief>& oneStepBeliefs = computeOneStepBeliefs(*model, observationStates, beliefIndices, stateOneStepBeliefs);
     const auto n_beliefs = oneStepBeliefs.size()+1; // with the initial belief
-    printf("N_oneStepBeliefs = %lu\n\n", oneStepBeliefs.size());
+    fprintf(log, "n_one-step_beliefs = %lu\n", oneStepBeliefs.size());
     const auto saRowDummy = transitionM.getRow(0);
 
     /*
@@ -245,6 +247,8 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     */
 
     const auto& numOfActions = getNumOfActionsForObservations(*model);
+    fprintf(log, "n_of_init_states = %0.f\n", nOfInitStates);
+    fprintf(log, "n_of_actions_in_s0 = %lu\n", numOfActions[initObs]);
 
     // Q-values
     std::vector<std::vector<double>> Q_old(n_beliefs);
@@ -262,6 +266,7 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     }
 
     // limit sets of observations
+    // (b, a) idx -> obs
     std::vector<std::vector<std::unordered_set<uint64_t>>> obsSets(n_beliefs);
 
     // b0
@@ -315,9 +320,18 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
         printf("\n");
     } */
 
+    fprintf(log, "precompute_time = %.2fs\n", std::chrono::duration<double>(Clock::now() - algStart).count());
+
+    bool timedOut = false;
+    int completed_iters = 0;
     // Q_TIB updates
     for (int i = 0; i < iterations; i++) {
-        printf("##############\niteration: %d\n##############\n\n", i);
+        if (timedOut) {
+            fprintf(log, "TO: ");
+            break;
+        }
+
+        // printf("##############\niteration: %d\n##############\n\n", i);
         double delta = -std::numeric_limits<double>::infinity();
 
         // compute new Q-value for initial belief
@@ -391,6 +405,13 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
 
         // forall one-step beliefs
         for (auto bIdx = 1; bIdx < n_beliefs; bIdx++) {
+            auto elapsed = std::chrono::duration<double>(Clock::now() - algStart).count();
+
+            if (elapsed >= timeout) {
+                timedOut = true;
+                break;
+            }
+
             auto& b = oneStepBeliefs[bIdx-1];
             // std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\none-step belief: " << b << "\n";
 
@@ -483,26 +504,46 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
             // printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
         }
 
-        printf("delta=%.6f\n\n", delta);
-        printf("##############\n\n");
+        printf("delta=%.3f\n", delta);
+        // printf("##############\n\n");
 
-        if (discount / (1.0 - discount) * delta < epsilon) {
-            printf("precision met, iterations=%d\n", i);
-            break;
+        completed_iters += 1;
+
+        if (!timedOut) {
+            if (discount / (1.0 - discount) * delta < epsilon) {
+                fprintf(log, "PRECISION_MET: ");
+                break;
+            }
         }
 
         Q_old = Q_new;
     }
 
+    if (completed_iters == iterations) {
+        fprintf(log, "MAX_ITERS_MET: ");
+    }
+    fprintf(log, "iters=%d, ", completed_iters);
+
+    uint64_t optimalAction = 0;
     double res = Q_new[0][0];
-    printf("Q[0] = [");
-    for (auto val : Q_new[0]) {
-        printf("%.3f, ", val);
+    std::string value_dump = std::format("Q[{:.2f}", res);
+    // printf("Q[0] = [");
+
+    const auto len = Q_new[0].size();
+    for (size_t j = 1; j < len; j++) {
+        auto val = Q_new[0][j];
+
+        value_dump += std::format(", {:.2f}", val);
         if (val > res) {
             res = val;
+            optimalAction = j;
         }
     }
-    printf("]\n\n");
+    value_dump += "]\n";
 
+    auto elapsed = std::chrono::duration<double>(Clock::now() - algStart).count();
+    fprintf(log, "res=%.2f, elapsed=%.2fs\n", res, elapsed);
+
+    fprintf(log, "%s", value_dump.c_str());
     return res;
 }

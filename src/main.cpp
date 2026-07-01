@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <format>
 #include <filesystem>
 
@@ -17,6 +18,8 @@ typedef storm::models::sparse::Pomdp<double> Pomdp;
 typedef storm::pomdp::modelchecker::BeliefExplorationPomdpModelChecker<Pomdp> PomdpModelChecker;
 
 void run(CLIArgsQTIB args) {
+    FILE* log = fopen(std::format("tib_{}.log", args.input.stem().string()).c_str(), "w");
+
     std::string formulaAsString = args.formula;
     std::shared_ptr< storm::logic::Formula const > formula;
 
@@ -35,8 +38,8 @@ void run(CLIArgsQTIB args) {
         model = makeCanonic.transform();
         assert(model->isCanonic());
 
-        const auto myResult = Q_TIB(model, args.func, args.h, args.gamma, args.epsilon);
-        printf("Q_TIB finished: result=%.2f\n", myResult);
+        const auto myResult = Q_TIB(model, args.func, args.h, args.gamma, args.epsilon, log, args.timeout);
+        // printf("Q_TIB finished: result=%.2f\n", myResult);
     } else {
         auto options = storm::parser::DirectEncodingParserOptions();
         options.buildChoiceLabeling = true;
@@ -48,8 +51,8 @@ void run(CLIArgsQTIB args) {
         model = makeCanonic.transform();
         assert(model->isCanonic());
 
-        const auto myResult = Q_TIB(model, args.func, args.h, args.gamma, args.epsilon);
-        printf("Q_TIB finished: result=%.2f\n", myResult);
+        const auto myResult = Q_TIB(model, args.func, args.h, args.gamma, args.epsilon, log, args.timeout);
+        // printf("Q_TIB finished: result=%.2f\n", myResult);
     }
 
     /* built-in checker
@@ -65,6 +68,8 @@ void run(CLIArgsQTIB args) {
     const auto checkerResult = checker.check(env, *formula);
     printf("checker finished: result_lower=%.2f\tresult_upper=%.2f\n\n", checkerResult.lowerBound, checkerResult.upperBound);
     */
+
+    fclose(log);
 }
 
 int main(int argc, char* argv[]) {
@@ -110,6 +115,8 @@ int main(int argc, char* argv[]) {
                 args.gamma = std::stod(argv[++i]);
             } else if (arg == "--epsilon" && cond) {
                 args.epsilon = std::stod(argv[++i]);
+            } else if (arg == "--timeout" && cond) {
+                args.timeout = std::stoi(argv[++i]);
             } else {
                 std::cerr << "unknown or incomplete arg: " << arg << std::endl;
                 exit(1);

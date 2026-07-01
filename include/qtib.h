@@ -26,6 +26,7 @@ struct CLIArgsQTIB {
     int h               = 250;
     double gamma        = 0.95;
     double epsilon      = 1e-3;
+    int timeout;
 };
 
 struct oneStepBelief {
@@ -72,6 +73,6 @@ struct oneStepBeliefHash {
     }
 };
 
-double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, int iterations, double discount, double epsilon);
+double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, int iterations, double discount, double epsilon, FILE* log, int timeout);
 
 #endif //STORM_PROJECT_STARTER_QTIB_H
