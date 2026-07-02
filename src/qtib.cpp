@@ -508,7 +508,8 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
             // printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
         }
 
-        printf("delta=%.3f\n", delta);
+        fprintf(log, "iter=%d, delta=%.3f\n", i, delta);
+        fflush(log);
         // printf("##############\n\n");
 
         completed_iters += 1;
