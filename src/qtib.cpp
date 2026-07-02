@@ -192,6 +192,7 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
         stateRewards = false;
     }
     fprintf(log, "state_rewards = %s\n", stateRewards ? "true" : "false");
+    fflush(log);
     assert(rewardModel.hasStateActionRewards());
 
     using Clock = std::chrono::steady_clock;
@@ -201,6 +202,7 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     const auto O = model->getNrObservations();
 
     fprintf(log, "S=%lu\tO=%lu\tC=%lu\n", S, O, model->getNumberOfChoices());
+    fflush(log);
 
     const auto& initStates = model->getInitialStates();
     const auto nOfInitStates = static_cast<double>(initStates.getNumberOfSetBits());
@@ -236,6 +238,7 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     const std::vector<oneStepBelief>& oneStepBeliefs = computeOneStepBeliefs(*model, observationStates, beliefIndices, stateOneStepBeliefs);
     const auto n_beliefs = oneStepBeliefs.size()+1; // with the initial belief
     fprintf(log, "n_one-step_beliefs = %lu\n", oneStepBeliefs.size());
+    fflush(log);
     const auto saRowDummy = transitionM.getRow(0);
 
     /*
@@ -248,6 +251,7 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     const auto& numOfActions = getNumOfActionsForObservations(*model);
     fprintf(log, "n_of_init_states = %0.f\n", nOfInitStates);
     fprintf(log, "n_of_actions_in_s0 = %lu\n", numOfActions[initObs]);
+    fflush(log);
 
     // Q-values
     std::vector<std::vector<double>> Q_old(n_beliefs);
@@ -320,6 +324,7 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     } */
 
     fprintf(log, "precompute_time = %.2fs\n", std::chrono::duration<double>(Clock::now() - algStart).count());
+    fflush(log);
 
     bool timedOut = false;
     int completed_iters = 0;
@@ -522,6 +527,7 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
         fprintf(log, "MAX_ITERS_MET: ");
     }
     fprintf(log, "iters=%d, ", completed_iters);
+    fflush(log);
 
     uint64_t optimalAction = 0;
     double res = Q_new[0][0];
@@ -544,5 +550,6 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     fprintf(log, "res=%.2f, elapsed=%.2fs\n", res, elapsed);
 
     fprintf(log, "%s", value_dump.c_str());
+    fflush(log);
     return res;
 }
