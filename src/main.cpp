@@ -17,7 +17,7 @@
 typedef storm::models::sparse::Pomdp<double> Pomdp;
 typedef storm::pomdp::modelchecker::BeliefExplorationPomdpModelChecker<Pomdp> PomdpModelChecker;
 
-void run(CLIArgsQTIB args) {
+void run(CLIArgsQTIB& args) {
     FILE* log = fopen(std::format("tib_{}.log", args.input.stem().string()).c_str(), "w");
 
     std::string formulaAsString = args.formula;
@@ -38,7 +38,7 @@ void run(CLIArgsQTIB args) {
         model = makeCanonic.transform();
         assert(model->isCanonic());
 
-        const auto myResult = Q_TIB(model, args.func, args.h, args.gamma, args.epsilon, log, args.timeout);
+        const auto myResult = Q_TIB(model, args.func, args.precompute, args.h, args.gamma, args.epsilon, log, args.timeout);
         // printf("Q_TIB finished: result=%.2f\n", myResult);
     } else {
         auto options = storm::parser::DirectEncodingParserOptions();
@@ -51,7 +51,7 @@ void run(CLIArgsQTIB args) {
         model = makeCanonic.transform();
         assert(model->isCanonic());
 
-        const auto myResult = Q_TIB(model, args.func, args.h, args.gamma, args.epsilon, log, args.timeout);
+        const auto myResult = Q_TIB(model, args.func, args.precompute, args.h, args.gamma, args.epsilon, log, args.timeout);
         // printf("Q_TIB finished: result=%.2f\n", myResult);
     }
 
@@ -109,6 +109,8 @@ int main(int argc, char* argv[]) {
                 args.formula = argv[++i];
             } else if (arg == "--func" && cond) {
                 args.func = argv[++i];
+            } else if (arg == "--precompute") {
+                args.precompute = true;
             } else if (arg == "-h" && cond) {
                 args.h = std::stoi(argv[++i]);
             } else if (arg == "--gamma" && cond) {
@@ -123,15 +125,6 @@ int main(int argc, char* argv[]) {
             }
         }
     }
-
-    /*
-    std::cout << args.input << "\n";
-    std::cout << args.constDefs << "\n";
-    std::cout << args.func << "\n";
-    std::cout << args.h << "\n";
-    std::cout << args.gamma << "\n";
-    std::cout << args.epsilon << "\n";
-    */
 
     run(args);
 }

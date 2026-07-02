@@ -7,7 +7,7 @@
 #include <storm/api/storm.h>
 
 bool stateRewards;
-constexpr bool PRS_PRECOMPUTED = true;
+bool PRS_PRECOMPUTED;
 
 std::vector<oneStepBelief>& computeOneStepBeliefs(const Pomdp& model,
     const std::vector<std::vector<uint32_t>>& observationStates,
@@ -179,7 +179,7 @@ double beliefActionReward(const oneStepBelief& belief, const uint64_t action,
     return res;
 }
 
-double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int iterations, const double discount, const double epsilon, FILE* log, const int timeout) {
+double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const bool precompute, const int iterations, const double discount, const double epsilon, FILE* log, const int timeout) {
     assert(iterations > 0);
     assert(func == MIN || func == MAX);
 
@@ -194,6 +194,10 @@ double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, const int it
     fprintf(log, "state_rewards = %s\n", stateRewards ? "true" : "false");
     fflush(log);
     assert(rewardModel.hasStateActionRewards());
+
+    PRS_PRECOMPUTED = precompute;
+    fprintf(log, "state probabilities precomputed: %s\n", PRS_PRECOMPUTED ? "true" : "false");
+    fflush(log);
 
     using Clock = std::chrono::steady_clock;
     auto algStart = Clock::now();

@@ -49,7 +49,6 @@ struct CLIArgsQTIB {
   - `double --epsilon`: satisfactory precision for early termination, default is 1e-3.
 
 ## Current Shortcomings
-  - By default, probabilities of states are pre-computed. For a little while it will not be possible to change this.
-  - Initial values are all zeros. The plan is to use FIB to initialize.
+  - Initial values are all zeros. A possibility of future work is to use FIB to initialize.
   - Some rather trivial, repetitive computations are not yet pre-computed.
-  - Non-canonical models are not (yet?) supported.
+  <!-- - Non-canonical models are not (yet?) supported. -->

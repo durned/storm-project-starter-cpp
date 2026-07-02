@@ -22,10 +22,11 @@ struct CLIArgsQTIB {
     std::filesystem::path input;
     std::string constDefs = "";
     std::string formula;
-    std::string func = MAX;
-    int h               = 250;
-    double gamma        = 0.95;
-    double epsilon      = 1e-3;
+    std::string func      = MAX;
+    bool precompute       = false;
+    int h                 = 250;
+    double gamma          = 0.95;
+    double epsilon        = 1e-3;
     int timeout;
 };
 
@@ -73,6 +74,6 @@ struct oneStepBeliefHash {
     }
 };
 
-double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, int iterations, double discount, double epsilon, FILE* log, int timeout);
+double Q_TIB(std::shared_ptr<Pomdp> model, const std::string& func, bool precompute, int iterations, double discount, double epsilon, FILE* log, int timeout);
 
 #endif //STORM_PROJECT_STARTER_QTIB_H
