@@ -126,5 +126,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    printf("fmt: %s, constdefs: \"%s\"\n", args.inModelFmt == InputModelFmt::Prism ? "prism" : "drn", args.constDefs);
+
     run(args);
 }

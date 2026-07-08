@@ -1,7 +1,5 @@
 pomdp
 
-// --input ../../examples/eval_any/samplerocks.prism --formula "Rmin=? [F \"goal\" ]" --func min --constdefs N=4
-
 observables
 started, x, y, r1taken, r1lastobs, finish, r2taken, r2lastobs//, r3taken, r3lastobs
 endobservables

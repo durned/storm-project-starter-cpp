@@ -6,7 +6,7 @@
 # --build-arg BASE_IMAGE=<new_base_image>
 
 # Set base image
-ARG BASE_IMAGE=movesrwth/storm:stable-debug
+ARG BASE_IMAGE=movesrwth/storm:stable
 FROM $BASE_IMAGE
 RUN apt update && apt install -y gdb && apt install -y parallel && apt install -y nano
 LABEL org.opencontainers.image.authors="dev@stormchecker.org"
