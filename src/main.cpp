@@ -1,6 +1,8 @@
 #include <cstdio>
 #include <format>
 #include <filesystem>
+#include <algorithm>
+#include <string>
 
 #include "qtib.h"
 
@@ -18,7 +20,7 @@ typedef storm::models::sparse::Pomdp<double> Pomdp;
 typedef storm::pomdp::modelchecker::BeliefExplorationPomdpModelChecker<Pomdp> PomdpModelChecker;
 
 void run(CLIArgsQTIB& args) {
-    FILE* log = fopen(std::format("tib_{}.log", args.input.stem().string()).c_str(), "w");
+    FILE* log = fopen(std::format("tib_{}_{}.log", args.input.stem().string(), args.constDefs).c_str(), "w");
 
     std::string formulaAsString = args.formula;
     std::shared_ptr< storm::logic::Formula const > formula;
